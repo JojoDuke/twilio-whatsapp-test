@@ -4,9 +4,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from db import SessionLocal, Conversation
 from datetime import datetime
 from openai import OpenAI
-from decouple import config
 import logging
-import asyncio
 import os
 
 # Configure logging
@@ -19,8 +17,15 @@ logger = logging.getLogger(__name__)
 # Init FastAPI
 app = FastAPI()
 
-# Initialize OpenAI client
-openai_key = config("OPENAI_API_KEY") if os.path.exists(".env") else os.environ.get("OPENAI_API_KEY")
+# Initialize OpenAI client - try environment variable first (Railway), then .env file (local)
+openai_key = os.environ.get("OPENAI_API_KEY")
+if not openai_key:
+    try:
+        from decouple import config
+        openai_key = config("OPENAI_API_KEY")
+    except Exception:
+        raise ValueError("OPENAI_API_KEY not found in environment variables or .env file")
+        
 client = OpenAI(api_key=openai_key)
 
 # Startup event

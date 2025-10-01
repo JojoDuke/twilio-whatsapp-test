@@ -1,13 +1,17 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from decouple import config
 from datetime import datetime
 import os
 
-# Use the single Neon connection string
-# Try environment variable first (for Vercel), then fall back to config (for local)
-DATABASE_URL = os.environ.get("NEON_DB_URL") or config("NEON_DB_URL")
+# Use environment variable first (for Railway/production), then try .env file (for local)
+DATABASE_URL = os.environ.get("NEON_DB_URL")
+if not DATABASE_URL:
+    try:
+        from decouple import config
+        DATABASE_URL = config("NEON_DB_URL")
+    except Exception:
+        raise ValueError("NEON_DB_URL not found in environment variables or .env file")
 
 # Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL, echo=True)
