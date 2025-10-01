@@ -33,15 +33,6 @@ async def startup_event():
     logger.info(f"✅ OpenAI client initialized")
     logger.info(f"✅ Database connection ready")
     logger.info("=" * 50)
-    
-    # Start background task for heartbeat
-    asyncio.create_task(heartbeat())
-
-async def heartbeat():
-    """Log a heartbeat message every 5 seconds"""
-    while True:
-        await asyncio.sleep(5)
-        logger.info("💓 Server heartbeat - Still running...")
 
 # Twilio Webhook Route
 @app.post("/whatsapp")
