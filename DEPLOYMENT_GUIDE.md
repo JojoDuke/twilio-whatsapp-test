@@ -1,45 +1,35 @@
-# Deploying to Vercel
+# Deploying to Railway
 
-This guide will help you deploy your WhatsApp bot to Vercel, eliminating the need for ngrok.
+This guide will help you deploy your WhatsApp bot to Railway, eliminating the need for ngrok.
 
 ## Prerequisites
 
-- A [Vercel account](https://vercel.com/signup) (free tier works fine)
+- A [Railway account](https://railway.app/) (free tier: $5 credit/month)
 - Your environment variables ready:
   - `OPENAI_API_KEY`
   - `NEON_DB_URL`
 
 ## Deployment Steps
 
-### 1. Install Vercel CLI (Optional but recommended)
+### 1. Create Railway Project
 
-```bash
-npm install -g vercel
-```
+1. **Go to [Railway](https://railway.app/)**
 
-### 2. Deploy via Vercel Dashboard (Easiest Method)
+2. **Sign in with GitHub**
 
-1. **Push your code to GitHub** (if not already done):
-   ```bash
-   git add .
-   git commit -m "Add Vercel deployment configuration"
-   git push origin master
-   ```
+3. **Click "New Project"**
 
-2. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+4. **Select "Deploy from GitHub repo"**
 
-3. **Click "Add New Project"**
+5. **Choose your `twilio-wa-bot` repository**
 
-4. **Import your GitHub repository**
+### 2. Configure Environment Variables
 
-5. **Configure your project**:
-   - Framework Preset: `Other`
-   - Root Directory: `./` (leave as default)
-   - Build Command: (leave empty)
-   - Output Directory: (leave empty)
+1. **In your Railway project**, click on your service
 
-6. **Add Environment Variables**:
-   Click on "Environment Variables" and add:
+2. **Go to the "Variables" tab**
+
+3. **Add the following variables**:
    - `OPENAI_API_KEY` = your OpenAI API key
    - `NEON_DB_URL` = your Neon PostgreSQL connection string
    
@@ -48,61 +38,35 @@ npm install -g vercel
    postgresql://user:password@host.neon.tech/dbname?sslmode=require
    ```
 
-7. **Click "Deploy"**
+### 3. Deploy
 
-8. **Wait for deployment** (usually takes 1-2 minutes)
+Railway will automatically:
+- Detect your `Procfile`
+- Install dependencies from `requirements.txt`
+- Run the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 
-### 3. Deploy via Vercel CLI (Alternative Method)
+Wait for the deployment to complete (usually 2-3 minutes).
 
-If you prefer using the command line:
+### 4. Get Your Railway URL
 
-```bash
-# Login to Vercel
-vercel login
+1. Go to **Settings** tab in your Railway service
+2. Scroll to **Networking** section
+3. Click **Generate Domain**
+4. You'll get a URL like: `https://your-project.up.railway.app`
 
-# Deploy (from project root)
-vercel
-
-# Follow the prompts:
-# - Set up and deploy? Yes
-# - Which scope? (select your account)
-# - Link to existing project? No
-# - What's your project's name? (enter a name)
-# - In which directory is your code located? ./
-
-# Add environment variables
-vercel env add OPENAI_API_KEY
-# (paste your key when prompted)
-
-vercel env add NEON_DB_URL
-# (paste your database URL when prompted)
-
-# Deploy to production
-vercel --prod
-```
-
-## After Deployment
-
-### 1. Get Your Vercel URL
-
-After deployment, you'll receive a URL like:
-```
-https://your-project-name.vercel.app
-```
-
-### 2. Update Twilio Webhook
+### 5. Update Twilio Webhook
 
 1. Go to your [Twilio Console](https://console.twilio.com/)
 2. Navigate to **Messaging** > **Try it out** > **Send a WhatsApp message** (or your WhatsApp Business setup)
 3. In the **Sandbox Settings** or **WhatsApp Senders**, find the webhook configuration
 4. Update the webhook URL to:
    ```
-   https://your-project-name.vercel.app/whatsapp
+   https://your-project.up.railway.app/whatsapp
    ```
 5. Make sure the HTTP method is set to `POST`
 6. Save the configuration
 
-### 3. Test Your Bot
+### 6. Test Your Bot
 
 Send a WhatsApp message to your Twilio number and verify:
 - You receive a response from the bot
@@ -110,20 +74,21 @@ Send a WhatsApp message to your Twilio number and verify:
 
 ## Monitoring and Logs
 
-- View logs in [Vercel Dashboard](https://vercel.com/dashboard) > Your Project > Logs
-- Monitor function executions and errors
-- Check for any environment variable issues
+- View logs in Railway Dashboard > Your Service > Deployments > View Logs
+- Monitor resource usage and costs
+- Check for any deployment or runtime errors
 
 ## Troubleshooting
 
 ### Issue: "Module not found" errors
-- Make sure `requirements.txt` is in the root directory
-- Verify all dependencies are listed
+- Check that all dependencies are in `requirements.txt`
+- Verify the deployment logs for the exact missing module
+- Add any missing dependencies and redeploy
 
 ### Issue: Database connection fails
-- Check that `NEON_DB_URL` is correctly set in Vercel environment variables
+- Check that `NEON_DB_URL` is correctly set in Railway environment variables
 - Ensure the connection string includes `?sslmode=require`
-- Verify your Neon database is active
+- Verify your Neon database is active and not paused
 
 ### Issue: OpenAI API errors
 - Verify `OPENAI_API_KEY` is correctly set
@@ -131,54 +96,82 @@ Send a WhatsApp message to your Twilio number and verify:
 
 ### Issue: Webhook not responding
 - Verify the webhook URL in Twilio is correct
-- Check Vercel deployment logs for errors
-- Test the health check endpoint: `https://your-project-name.vercel.app/`
+- Check Railway deployment logs for errors
+- Test the health check endpoint: `https://your-project.up.railway.app/`
+
+### Issue: Port errors
+- Railway automatically provides the `$PORT` variable
+- Make sure your Procfile uses `$PORT` (not a hardcoded port)
 
 ## Project Structure
 
 ```
 twilio-wa-bot/
-├── api/
-│   └── index.py          # Vercel serverless function entry point
 ├── ai_chatbot/
 │   ├── db.py            # Database configuration
-│   ├── main.py          # Original local development file
-│   └── requirements.txt # Dependencies (kept for reference)
-├── requirements.txt      # Root dependencies for Vercel
-├── vercel.json          # Vercel configuration
-└── .vercelignore        # Files to exclude from deployment
+│   ├── main.py          # FastAPI application
+│   ├── init_db.py       # Database initialization
+│   └── requirements.txt # Local dev dependencies
+├── Procfile             # Railway start command
+├── requirements.txt     # Production dependencies
+└── .gitignore          # Git ignore rules
 ```
 
 ## Cost Considerations
 
-- **Vercel Free Tier**: Includes 100GB bandwidth and 100 hours of serverless function execution per month
-- **Neon Free Tier**: Includes 3GB storage and 100 hours of compute per month
+- **Railway Free Tier**: $5 credit per month
+  - Usually sufficient for small to medium traffic bots
+  - Approximately 500 hours of uptime per month
+- **Neon Free Tier**: 3GB storage, 100 hours of compute per month
 - **OpenAI**: Pay per token usage
 
 For a typical chatbot with moderate usage, the free tiers should be sufficient.
 
 ## Updating Your Deployment
 
-Whenever you push changes to your GitHub repository:
-- Vercel will automatically redeploy (if you connected via GitHub)
-- You can also manually redeploy from the Vercel dashboard
+Railway automatically redeploys when you push to your GitHub repository:
 
-Or via CLI:
 ```bash
-vercel --prod
+git add .
+git commit -m "Your update message"
+git push origin master
 ```
+
+Railway will detect the push and redeploy automatically.
+
+## Manual Redeployment
+
+If needed, you can manually trigger a redeploy:
+1. Go to Railway Dashboard > Your Service
+2. Click on the latest deployment
+3. Click "Redeploy"
 
 ## Rollback
 
-If something goes wrong, you can rollback to a previous deployment:
-1. Go to Vercel Dashboard > Your Project > Deployments
+If something goes wrong, you can rollback:
+1. Go to Railway Dashboard > Your Service > Deployments
 2. Find a previous successful deployment
-3. Click the three dots menu > "Promote to Production"
+3. Click the three dots menu > "Redeploy"
+
+## Pausing/Resuming
+
+To save credits when not in use:
+1. Railway Dashboard > Your Service > Settings
+2. Scroll to **Danger Zone**
+3. Click **Pause Service** (or Resume)
 
 ---
 
+## Why Railway?
+
+✅ **Better for FastAPI** - Runs actual servers, not serverless functions  
+✅ **No cold starts** - Your app stays warm  
+✅ **Automatic HTTPS** - Secure by default  
+✅ **Easy deployments** - Push to GitHub and it deploys  
+✅ **Great logs** - Easy debugging  
+✅ **Fair pricing** - $5/month free credit  
+
 **Need Help?** 
-- [Vercel Documentation](https://vercel.com/docs)
+- [Railway Documentation](https://docs.railway.app/)
 - [Twilio WhatsApp Documentation](https://www.twilio.com/docs/whatsapp)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-
