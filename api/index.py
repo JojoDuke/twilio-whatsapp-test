@@ -4,10 +4,28 @@ from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 from openai import OpenAI
 from mangum import Mangum
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 
-# Import from local db module
-from db import SessionLocal, Conversation
+# Database setup directly in this file for Vercel compatibility
+DATABASE_URL = os.environ.get("NEON_DB_URL")
+engine = create_engine(DATABASE_URL, echo=False)
+Base = declarative_base()
+
+# Define Conversations table
+class Conversation(Base):
+    __tablename__ = "conversations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_number = Column(String, index=True)
+    user_message = Column(Text)
+    bot_reply = Column(Text)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+# Session maker
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Init FastAPI
 app = FastAPI()
