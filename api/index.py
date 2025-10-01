@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 from openai import OpenAI
+from mangum import Mangum
 import os
 import sys
 
@@ -57,6 +58,6 @@ async def whatsapp_webhook(
 async def health_check():
     return {"status": "ok", "message": "WhatsApp Bot API is running on Vercel"}
 
-# Export the app for Vercel
-handler = app
+# Wrap the FastAPI app with Mangum for Vercel serverless
+handler = Mangum(app)
 
