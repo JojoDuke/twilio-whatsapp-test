@@ -83,8 +83,11 @@ A simple WhatsApp chatbot powered by OpenAI's GPT-3.5-turbo, built with FastAPI 
 
 ## Running the Application
 
+### Local Development
+
 1. **Start the FastAPI server**
    ```bash
+   cd ai_chatbot
    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
@@ -94,6 +97,20 @@ A simple WhatsApp chatbot powered by OpenAI's GPT-3.5-turbo, built with FastAPI 
    ngrok http 8000
    ```
    Then use the ngrok URL as your Twilio webhook URL.
+
+### Production Deployment (Vercel)
+
+Deploy to Vercel to eliminate the need for ngrok:
+
+1. **Push your code to GitHub**
+2. **Import to Vercel** at [vercel.com](https://vercel.com)
+3. **Add environment variables** in Vercel dashboard:
+   - `OPENAI_API_KEY`
+   - `NEON_DB_URL`
+4. **Deploy and get your production URL**
+5. **Update Twilio webhook** to `https://your-project.vercel.app/whatsapp`
+
+📖 For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ## API Endpoints
 

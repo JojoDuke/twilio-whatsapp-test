@@ -3,9 +3,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from decouple import config
 from datetime import datetime
+import os
 
 # Use the single Neon connection string
-DATABASE_URL = config("NEON_DB_URL")
+# Try environment variable first (for Vercel), then fall back to config (for local)
+DATABASE_URL = os.environ.get("NEON_DB_URL") or config("NEON_DB_URL")
 
 # Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL, echo=True)

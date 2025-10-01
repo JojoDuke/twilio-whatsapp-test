@@ -1,0 +1,6 @@
+ai_chatbot/venv/
+ai_chatbot/__pycache__/
+*.pyc
+.env
+ai_chatbot/.env
+
