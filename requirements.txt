@@ -1,5 +1,5 @@
 fastapi
-mangum
+uvicorn
 twilio
 openai
 python-decouple

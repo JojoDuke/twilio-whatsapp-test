@@ -3,13 +3,12 @@ from fastapi.responses import PlainTextResponse
 from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 from openai import OpenAI
-from mangum import Mangum
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Database setup directly in this file for Vercel compatibility
+# Database setup - use environment variable
 DATABASE_URL = os.environ.get("NEON_DB_URL")
 engine = create_engine(DATABASE_URL, echo=False)
 Base = declarative_base()
@@ -71,8 +70,5 @@ async def whatsapp_webhook(
 @app.get("/")
 @app.get("/api")
 async def health_check():
-    return {"status": "ok", "message": "WhatsApp Bot API is running on Vercel"}
-
-# Wrap the FastAPI app with Mangum for Vercel serverless
-handler = Mangum(app)
+    return {"status": "ok", "message": "WhatsApp Bot API is running on Railway"}
 
