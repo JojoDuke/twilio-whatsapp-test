@@ -39,6 +39,12 @@ async def startup_event():
     logger.info(f"✅ Database connection ready")
     logger.info("=" * 50)
 
+# Health check endpoint (for Railway)
+@app.get("/")
+async def health_check():
+    logger.info("🏥 Health check endpoint hit")
+    return {"status": "ok", "message": "WhatsApp Bot is running on Railway"}
+
 # Twilio Webhook Route
 @app.post("/whatsapp")
 async def whatsapp_webhook(
