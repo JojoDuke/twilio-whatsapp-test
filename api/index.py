@@ -5,11 +5,8 @@ from datetime import datetime
 from openai import OpenAI
 from mangum import Mangum
 import os
-import sys
 
-# Add parent directory to path to import from ai_chatbot
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'ai_chatbot'))
-
+# Import from local db module
 from db import SessionLocal, Conversation
 
 # Init FastAPI
