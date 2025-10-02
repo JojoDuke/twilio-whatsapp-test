@@ -1,2 +1,2 @@
-web: cd ai_chatbot && uvicorn main:app --host 0.0.0.0 --port $PORT
+web: cd ai_chatbot && uvicorn main:app --host 0.0.0.0 --port 8000
 
