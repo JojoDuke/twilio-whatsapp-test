@@ -79,6 +79,9 @@ def summarize_slots(
     timezone: Optional[str] = None,
     min_duration_minutes: Optional[int] = None,
     not_before_utc: Optional[datetime] = None,
+    open_hour_local: Optional[int] = None,
+    close_hour_local: Optional[int] = None,
+    annotate_last_start: bool = False,
 ) -> str:
     if not slots:
         return "No available booking slots were found in the requested window."
@@ -110,23 +113,28 @@ def summarize_slots(
     sorted_items = sorted(unique.values(), key=lambda a: parse_iso(a["start"]))
 
     lines: List[str] = []
+    kept_local_times: List[tuple] = []  # (start_local_dt, end_local_dt)
     for attributes in sorted_items:
         start_dt = parse_iso(attributes["start"])  # aware
         end_dt = parse_iso(attributes["end"])      # aware
         # Skip slots that start before not_before_utc; compare in UTC
         if isinstance(not_before_utc, datetime):
+            # Convert both datetimes to UTC using a robust fallback if tzdata is unavailable
             try:
-                utc = ZoneInfo("UTC")
-                start_dt_utc = start_dt.astimezone(utc)
-                nbu = not_before_utc
-                if nbu.tzinfo is None:
-                    nbu = nbu.replace(tzinfo=utc)
-                else:
-                    nbu = nbu.astimezone(utc)
-                if start_dt_utc < nbu:
-                    continue
+                from datetime import timezone as dt_timezone
+                utc = ZoneInfo("UTC") if ZoneInfo is not None else dt_timezone.utc
             except Exception:
-                pass
+                from datetime import timezone as dt_timezone
+                utc = dt_timezone.utc
+
+            start_dt_utc = start_dt.astimezone(utc)
+            nbu = not_before_utc
+            if nbu.tzinfo is None:
+                nbu = nbu.replace(tzinfo=utc)
+            else:
+                nbu = nbu.astimezone(utc)
+            if start_dt_utc < nbu:
+                continue
         # Filter by minimum duration if provided
         if isinstance(min_duration_minutes, int) and min_duration_minutes > 0:
             total_minutes = int((end_dt - start_dt).total_seconds() // 60)
@@ -135,15 +143,31 @@ def summarize_slots(
         if tzinfo is not None:
             start_dt = start_dt.astimezone(tzinfo)
             end_dt = end_dt.astimezone(tzinfo)
-        start_str = start_dt.strftime("%H:%M")
-        end_str = end_dt.strftime("%H:%M")
+        # Filter by business hours if provided (local time comparisons)
+        if isinstance(open_hour_local, int) and isinstance(close_hour_local, int):
+            if not (0 <= open_hour_local <= 23 and 0 <= close_hour_local <= 23):
+                pass
+            else:
+                # Require slot fully within [open, close]
+                if start_dt.hour < open_hour_local:
+                    continue
+                if end_dt.hour > close_hour_local or (end_dt.hour == close_hour_local and end_dt.minute > 0):
+                    continue
+        # Display AM/PM for clarity
+        start_str = start_dt.strftime("%I:%M %p").lstrip('0')
+        end_str = end_dt.strftime("%I:%M %p").lstrip('0')
+        kept_local_times.append((start_dt, end_dt))
         lines.append(f"- {start_str}–{end_str}")
         if len(lines) >= limit:
             break
 
     if not lines:
         return "Slots data available but could not be parsed."
-    return "Here are some available times (local):\n" + "\n".join(lines)
+    if annotate_last_start and kept_local_times:
+        last_start = kept_local_times[-1][0]
+        # annotate last line
+        lines[-1] = lines[-1] + " (last start today)"
+    return "Here are some available times (Europe/Prague):\n" + "\n".join(lines)
 
 
 async def get_services(business_id: Optional[str] = None) -> List[Dict[str, Any]]:

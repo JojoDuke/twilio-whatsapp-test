@@ -52,11 +52,12 @@ BOOKING_SYSTEM_PROMPT = (
     "Follow these steps:\n"
     "1) Greet briefly using the business name.\n"
     "2) First, present the list of available services with numbers.\n"
-    "3) When the user picks a service (by number or name), offer 3-5 nearest available times for today and the next days.\n"
-    "4) If user wants later, suggest future dates within the next 7 days.\n"
-    "5) Collect full name and phone if missing.\n"
-    "6) Confirm summary (service, date, time, barber/resource if applicable).\n"
-    "6) Do not discuss anything outside booking a haircut.\n"
+    "3) When the user picks a service (by number or name), offer 3-5 nearest available times (display in AM/PM), respecting business hours 8:00–4:00 (Europe/Prague).\n"
+    "4) If the user wants more options, tell them they can reply 'more' to see additional times.\n"
+    "5) If user wants later, suggest future dates within the next 7 days.\n"
+    "6) Collect full name and phone if missing.\n"
+    "7) Confirm summary (service, date, time, barber/resource if applicable).\n"
+    "8) Do not discuss anything outside booking a haircut.\n"
     "Keep messages short, clear, and actionable."
 )
 
@@ -193,27 +194,38 @@ async def whatsapp_webhook(
     # Try to fetch availability for the next 7 days or the requested day (use selected service if provided)
     availability_note = ""
     try:
-        now = now_utc
         from datetime import timedelta
-        end = now + timedelta(days=7)
+        # Define query window and an effective lower bound that never allows past times
         if requested_day_start and requested_day_end:
-            now = requested_day_start
-            end = requested_day_end
+            query_start = requested_day_start
+            query_end = requested_day_end
+            # Do not allow past times even when a specific day (e.g., today) is requested
+            effective_not_before = requested_day_start if requested_day_start > now_utc else now_utc
+        else:
+            query_start = now_utc
+            query_end = now_utc + timedelta(days=7)
+            effective_not_before = now_utc
         effective_service_id = selected_service_id or RESERVIO_SERVICE_ID
         if effective_service_id:
             slots = await get_booking_slots(
                 business_id=RESERVIO_BUSINESS_ID,
-                start_utc=now,
-                end_utc=end,
+                start_utc=query_start,
+                end_utc=query_end,
                 service_id=effective_service_id,
                 resource_id=RESERVIO_RESOURCE_ID,
             )
+            # If user asked for "more", increase limit
+            more_requested = (" more" in lower_body) or (lower_body.strip() == "more") or ("více" in lower_body)
             availability_note = summarize_slots(
                 slots,
-                limit=50 if requested_day_start else 5,
+                limit=50 if (requested_day_start or more_requested) else 5,
                 timezone="Europe/Prague",
                 min_duration_minutes=selected_service_duration_min,
-                not_before_utc=now_utc if (requested_day_start is None) else requested_day_start,
+                # Ensure no past times are suggested
+                not_before_utc=effective_not_before,
+                open_hour_local=8,
+                close_hour_local=16,
+                annotate_last_start=bool(requested_day_start),
             )
     except Exception as e:
         logger.warning(f"Availability fetch failed: {e}")
@@ -286,7 +298,7 @@ async def whatsapp_webhook(
     # Call OpenAI for a constrained booking reply
     logger.info("🤖 Calling OpenAI API for barber booking...")
     completion = client.chat.completions.create(
-        model="gpt-5-nano",
+        model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.3,
     )
